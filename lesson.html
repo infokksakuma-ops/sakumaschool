@@ -159,11 +159,20 @@ const content = document.getElementById('content');
 
 let currentUser = null;
 let progressState = {};
+let fullAccess = false;
+const TRIAL_LIMIT_CHAPTER = 2;
 
 async function requireAuth(){
   const { data: { session } } = await sb.auth.getSession();
   if(!session){ location.href = 'login.html'; return null; }
   return session.user;
+}
+
+async function loadAccess(){
+  try{
+    const { data } = await sb.from('profiles').select('full_access').eq('id', currentUser.id).maybeSingle();
+    fullAccess = !!(data && data.full_access);
+  }catch(e){ fullAccess = false; }
 }
 
 async function loadProgressState(){
@@ -188,11 +197,14 @@ function alreadyDone(){
   return !!progressState[id];
 }
 
-function renderLocked(title){
+function renderLocked(title, reason){
+  const isAccessLock = reason === 'access';
   content.innerHTML = `
     <div class="locked-card">
-      <div class="big pixel">🔒 近日公開</div>
-      <p>「${title || ''}」の動画は準備中です。公開までもう少しお待ちください。</p>
+      <div class="big pixel">${isAccessLock ? '🔒 完全版限定' : '🔒 近日公開'}</div>
+      <p>${isAccessLock
+        ? 'この動画は完全版でのみ視聴できます。運営に解放を依頼してください。'
+        : `「${title || ''}」の動画は準備中です。公開までもう少しお待ちください。`}</p>
       <a class="pixel" href="index.html">クエストログに戻る</a>
     </div>`;
 }
@@ -299,9 +311,13 @@ function mountVimeo(){
 async function boot(){
   currentUser = await requireAuth();
   if(!currentUser) return;
+  await loadAccess();
   await loadProgressState();
+  const chNum = parseInt((id||'').split('-')[0], 10);
   if(!video){
     renderNotFound();
+  } else if(!fullAccess && chNum > TRIAL_LIMIT_CHAPTER){
+    renderLocked(video.title, 'access');
   } else if(video.available === false){
     renderLocked(video.title);
   } else {
