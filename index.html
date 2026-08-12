@@ -201,6 +201,26 @@ img{image-rendering:pixelated;}
   background:var(--blue); border:2px solid #1c3468; color:#fff; white-space:nowrap;
 }
 .quest.done .quest-action a{background:var(--green); border-color:#2f7d43;}
+.quest.locked-quest{opacity:.55;}
+.quest-locked{font-size:11px; color:var(--ink-soft); padding:7px 10px; white-space:nowrap;}
+
+.chapter-card{
+  background:var(--box-bg); border:3px solid var(--box-border); box-shadow:0 0 0 2px var(--box-border-inner) inset;
+  border-radius:8px; padding:14px 16px; margin-bottom:12px; color:var(--ink);
+  display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:14px;
+}
+@media (max-width:520px){.chapter-card{grid-template-columns:1fr; text-align:left;}
+  .chapter-card .quest-action{justify-self:stretch;}}
+.chapter-card.done{box-shadow:0 0 0 2px var(--green) inset; border-color:var(--green);}
+.chapter-card-badge{
+  background:var(--blue); color:#fff; font-size:10.5px; padding:6px 10px; border-radius:6px; white-space:nowrap;
+}
+.chapter-card-title{font-size:14.5px; font-weight:700; margin-bottom:6px;}
+.chapter-progress-track{
+  width:100%; max-width:220px; height:8px; background:#0e0c16; border:2px solid var(--box-border); border-radius:5px; overflow:hidden;
+}
+.chapter-progress-fill{height:100%; background:linear-gradient(90deg,var(--green),#2f8a51);}
+.chapter-progress-num{font-size:10px; color:var(--ink-soft); margin-top:4px;}
 
 /* ---------- side quest intro ---------- */
 .side-intro{display:flex; align-items:center; gap:14px; margin-bottom:14px;}
@@ -276,8 +296,8 @@ footer{text-align:center; color:#736d92; font-size:10.5px; margin-top:56px;}
 </section>
 
 <section class="section" id="questlog">
-  <div class="section-head"><span class="tag pixel">MAIN</span><h2>メインクエスト（Chapter 1〜9）</h2></div>
-  <p class="section-sub">上から順に受講するのがおすすめ。クリアしたらチェックでEXP獲得。</p>
+  <div class="section-head"><span class="tag pixel">MAIN</span><h2>メインクエスト（Chapter 0〜5）</h2></div>
+  <p class="section-sub">動画を90%以上視聴すると自動でクリア判定。Chapter6以降は準備でき次第追加していきます。</p>
   <div id="mainQuests"></div>
 </section>
 
@@ -320,15 +340,51 @@ const CATS = [
 ];
 
 const MAIN_QUESTS = [
-  {id:'c1', n:1, title:'SNSビジネスについて', cat:'sns',    url:'https://fukugyoukosen.my.canva.site/capter1', exp:10},
-  {id:'c2', n:2, title:'商品の作り方',        cat:'product',url:'https://fukugyoukosen.my.canva.site/capter2', exp:10},
-  {id:'c3', n:3, title:'営業の裏技',          cat:'sales',  url:'https://fukugyoukosen.my.canva.site/capter3', exp:10},
-  {id:'c4', n:4, title:'TikTokとは？',        cat:'media',  url:'https://fukugyoukosen.my.canva.site/capter4', exp:10},
-  {id:'c5', n:5, title:'【丸パクリ推奨】実践編',cat:'action', url:'https://fukugyoukosen.my.canva.site/capter5', exp:10},
-  {id:'c6', n:6, title:'Instagramとは？',     cat:'media',  url:'https://fukugyoukosen.my.canva.site/capter6', exp:10},
-  {id:'c7', n:7, title:'Facebookとは？',      cat:'media',  url:'https://fukugyoukosen.my.canva.site/capter7', exp:10},
-  {id:'c8', n:8, title:'YouTubeとは？',       cat:'media',  url:'https://fukugyoukosen.my.canva.site/capter8', exp:10},
-  {id:'c9', n:9, title:'LINE VOOMとは？',     cat:'media',  url:'https://fukugyoukosen.my.canva.site/capter9', exp:10},
+  {id:'0',   title:'講座の学び方',                 cat:'sns',    available:true},
+  {id:'1-1', title:'【認知・夢】or【お金】',         cat:'sns',    available:true},
+  {id:'1-2', title:'SNSビジネス【お金】を産む',      cat:'sns',    available:true},
+  {id:'1-3', title:'私は【認知・夢】を選択した',     cat:'sns',    available:true},
+  {id:'2-1', title:'コンテンツジャンル選び',         cat:'sales',  available:true},
+  {id:'2-2', title:'コンテンツ競合リサーチ',         cat:'sales',  available:true},
+  {id:'2-3', title:'コンセプトの決め方',             cat:'sales',  available:true},
+  {id:'2-4', title:'有料コンテンツのチャプター',     cat:'sales',  available:true},
+  {id:'2-5', title:'コンテンツの作り方',             cat:'sales',  available:true},
+  {id:'2-6', title:'教育サイトの作り方',             cat:'sales',  available:true},
+  {id:'2-7', title:'サポート内容',                   cat:'media',  available:true},
+  {id:'2-8', title:'価格と決済',                     cat:'media',  available:true},
+  {id:'2-9', title:'LP作成手順',                     cat:'media',  available:false},
+  {id:'2-10',title:'公式LINEの作り方',               cat:'media',  available:true},
+  {id:'2-11',title:'商品購買の導線設計',             cat:'media',  available:true},
+  {id:'2-12',title:'無料プレゼント',                 cat:'media',  available:true},
+  {id:'3-1', title:'相談会の手順',                   cat:'media',  available:true},
+  {id:'3-2', title:'商品購買の導線設計',             cat:'media',  available:true},
+  {id:'3-3', title:'商品を買わない理由',             cat:'media',  available:true},
+  {id:'4-1', title:'アルゴリズムの考え方',           cat:'sns',    available:true},
+  {id:'4-2', title:'競合リサーチ',                   cat:'sns',    available:true},
+  {id:'4-3', title:'アカウント設計',                 cat:'sns',    available:true},
+  {id:'4-4', title:'アカウントの機械学習',           cat:'sns',    available:true},
+  {id:'4-5', title:'【認知・夢】or【お金】',         cat:'sns',    available:true},
+  {id:'4-6', title:'優遇される映像',                 cat:'sns',    available:true},
+  {id:'4-7', title:'優遇される台本',                 cat:'sns',    available:true},
+  {id:'4-8', title:'コメント戦略',                   cat:'sns',    available:true},
+  {id:'4-9', title:'誹謗中傷は必ず来る',             cat:'sns',    available:false},
+  {id:'4-10',title:'海外戦略',                       cat:'sns',    available:false},
+  {id:'4-11',title:'企業案件は事務所に入る',         cat:'sns',    available:false},
+  {id:'4-12',title:'TikTok投稿手順_撮影',            cat:'sns',    available:true},
+  {id:'4-13',title:'TikTok投稿手順_編集〜アップ',    cat:'sns',    available:true},
+  {id:'4-14',title:'顔出しする？しない？',           cat:'sns',    available:true},
+  {id:'5-1', title:'【認知・夢】のための動画',       cat:'sns',    available:true},
+  {id:'5-2', title:'【お金】のための動画',           cat:'sns',    available:true},
+];
+MAIN_QUESTS.forEach(q=>{ q.exp = 10; q.chNum = q.id.split('-')[0]; });
+
+const CHAPTERS = [
+  {num:'0', title:'講座の学び方'},
+  {num:'1', title:'SNSビジネスについて'},
+  {num:'2', title:'商品の作り方'},
+  {num:'3', title:'営業の裏技'},
+  {num:'4', title:'TikTokとは？'},
+  {num:'5', title:'【丸パクリ推奨】実践編'},
 ];
 
 const SIDE_QUESTS = [
@@ -359,12 +415,12 @@ let typing = null;
 
 async function loadState(){
   try{
-    const res = await window.storage.get('quest-progress', false);
-    if(res && res.value){ state = JSON.parse(res.value); }
+    const raw = localStorage.getItem('quest-progress');
+    if(raw){ state = JSON.parse(raw); }
   }catch(e){ state = {}; }
 }
 async function saveState(){
-  try{ await window.storage.set('quest-progress', JSON.stringify(state), false); }
+  try{ localStorage.setItem('quest-progress', JSON.stringify(state)); }
   catch(e){ /* storage unavailable, continue without persistence */ }
 }
 
@@ -372,7 +428,7 @@ function totalExp(){
   return ALL_QUESTS.filter(q=>state[q.id]).reduce((s,q)=>s+q.exp,0);
 }
 function levelFromExp(exp){
-  return Math.min(6, Math.floor(exp/20)+1);
+  return Math.min(6, Math.floor(exp/(MAX_EXP/6))+1);
 }
 
 function typeLine(text){
@@ -418,21 +474,43 @@ function renderStats(){
 
 function questCard(q, isSide){
   const done = !!state[q.id];
-  return `<div class="quest ${done?'done':''}" data-id="${q.id}">
-    <div class="q-check" onclick="toggleQuest('${q.id}')"></div>
+  const locked = isSide ? false : (q.available === false);
+  const action = isSide
+    ? `<a href="${q.url}" target="_blank" rel="noopener">受講する</a>`
+    : (locked
+        ? `<span class="quest-locked pixel">近日公開</span>`
+        : `<a href="lesson.html?id=${encodeURIComponent(q.id)}">視聴する</a>`);
+  return `<div class="quest ${done?'done':''} ${locked?'locked-quest':''}" data-id="${q.id}">
+    <div class="q-check" onclick="${locked?'':`toggleQuest('${q.id}')`}"></div>
     <div>
-      <div class="q-title"><span class="q-num pixel">${isSide? q.n : 'Q'+q.n}</span>${q.title}</div>
+      <div class="q-title"><span class="q-num pixel">${isSide? q.n : q.id}</span>${q.title}</div>
       <div class="q-meta">
         <span class="q-badge ${isSide?'side':''}">${isSide?'サブ':'必修'}</span>
         <span class="q-exp pixel">★+${q.exp} EXP</span>
       </div>
     </div>
-    <div class="quest-action"><a href="${q.url}" target="_blank" rel="noopener">受講する</a></div>
+    <div class="quest-action">${action}</div>
+  </div>`;
+}
+
+function chapterCard(ch){
+  const quests = MAIN_QUESTS.filter(q=>q.chNum===ch.num);
+  const done = quests.filter(q=>state[q.id]).length;
+  const pct = quests.length ? Math.round(done/quests.length*100) : 0;
+  const complete = quests.length>0 && done===quests.length;
+  return `<div class="chapter-card ${complete?'done':''}">
+    <div class="chapter-card-badge pixel">Chapter ${ch.num}</div>
+    <div class="chapter-card-main">
+      <div class="chapter-card-title">${ch.title}</div>
+      <div class="chapter-progress-track"><div class="chapter-progress-fill" style="width:${pct}%"></div></div>
+      <div class="chapter-progress-num pixel">${done}/${quests.length} クリア</div>
+    </div>
+    <div class="quest-action"><a href="chapter.html?ch=${ch.num}">${complete?'見直す':'受講する'}</a></div>
   </div>`;
 }
 
 function renderQuests(){
-  document.getElementById('mainQuests').innerHTML = MAIN_QUESTS.map(q=>questCard(q,false)).join('');
+  document.getElementById('mainQuests').innerHTML = CHAPTERS.map(ch=>chapterCard(ch)).join('');
   document.getElementById('sideQuests').innerHTML = SIDE_QUESTS.map(q=>questCard(q,true)).join('');
 }
 
