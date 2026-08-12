@@ -152,11 +152,20 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let state = {};
 let currentUser = null;
+let fullAccess = false;
+const TRIAL_LIMIT_CHAPTER = 2;
 
 async function requireAuth(){
   const { data: { session } } = await sb.auth.getSession();
   if(!session){ location.href = 'login.html'; return null; }
   return session.user;
+}
+
+async function loadAccess(){
+  try{
+    const { data } = await sb.from('profiles').select('full_access').eq('id', currentUser.id).maybeSingle();
+    fullAccess = !!(data && data.full_access);
+  }catch(e){ fullAccess = false; }
 }
 
 async function loadState(){
@@ -190,6 +199,10 @@ function render(){
     content.innerHTML = `<div class="chapter-header"><h1 class="pixel">Chapterが見つかりません</h1><a class="back-link pixel" href="index.html">← クエストログに戻る</a></div>`;
     return;
   }
+  if(!fullAccess && parseInt(ch,10) > TRIAL_LIMIT_CHAPTER){
+    content.innerHTML = `<div class="chapter-header"><div class="num pixel">CHAPTER ${ch}</div><h1>🔒 完全版限定コンテンツ</h1><p>この章はお試し版では視聴できません。完全版が解放されるとご覧いただけます。</p><a class="back-link pixel" href="index.html">← クエストログに戻る</a></div>`;
+    return;
+  }
   const quests = MAIN_QUESTS.filter(q=>q.chNum===ch);
   const done = quests.filter(q=>state[q.id]).length;
   const pct = quests.length ? Math.round(done/quests.length*100) : 0;
@@ -208,6 +221,7 @@ function render(){
 async function boot(){
   currentUser = await requireAuth();
   if(!currentUser) return;
+  await loadAccess();
   await loadState();
   render();
 }
