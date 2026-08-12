@@ -138,6 +138,15 @@ img{image-rendering:pixelated;}
 .choice:before{content:'▶ '; color:var(--red);}
 .choice:hover{background:#fff;}
 
+.ai-tool-row{display:flex; gap:12px; flex-wrap:wrap;}
+.ai-tool-card{
+  flex:1; min-width:150px; text-decoration:none; text-align:center;
+  background:var(--box-bg); border:3px solid var(--box-border); box-shadow:0 0 0 2px var(--box-border-inner) inset;
+  border-radius:10px; padding:18px 10px; color:var(--ink);
+}
+.ai-tool-icon{font-size:26px; margin-bottom:8px;}
+.ai-tool-title{font-size:12px;}
+
 /* ---------- section shell ---------- */
 .section{max-width:640px; margin:44px auto 0; padding:0 16px;}
 .section-head{display:flex; align-items:baseline; gap:10px; margin-bottom:16px;}
@@ -292,6 +301,21 @@ footer{text-align:center; color:#736d92; font-size:10.5px; margin-top:56px;}
 </div>
 
 <section class="section">
+  <div class="section-head"><span class="tag pixel">TOOL</span><h2>AI分析ツール</h2></div>
+  <p class="section-sub">実際のアカウントをAIで分析できる特典ツール。</p>
+  <div class="ai-tool-row">
+    <a class="ai-tool-card" href="https://infokksakuma-ops.github.io/sakuma-daihon-ai/" target="_blank" rel="noopener">
+      <div class="ai-tool-icon">🔰</div>
+      <div class="ai-tool-title pixel">初心者AI分析ツール</div>
+    </a>
+    <a class="ai-tool-card" href="https://infokksakuma-ops.github.io/sakuma-shoudan-ai/" target="_blank" rel="noopener">
+      <div class="ai-tool-icon">🏆</div>
+      <div class="ai-tool-title pixel">上級者AI分析ツール</div>
+    </a>
+  </div>
+</section>
+
+<section class="section">
   <div class="section-head"><span class="tag pixel">STATUS</span><h2>能力ステータス</h2></div>
   <p class="section-sub">クエストをクリアするごとに、対応するステータスが育っていく。</p>
   <div class="stats" id="statsGrid"></div>
@@ -361,20 +385,20 @@ const MAIN_QUESTS = [
   {id:'3-1', title:'相談会の手順',                   cat:'media',  available:true},
   {id:'3-2', title:'商品購買の導線設計',             cat:'media',  available:true},
   {id:'3-3', title:'商品を買わない理由',             cat:'media',  available:true},
-  {id:'4-1', title:'アルゴリズムの考え方',           cat:'sns',    available:true},
-  {id:'4-2', title:'競合リサーチ',                   cat:'sns',    available:true},
-  {id:'4-3', title:'アカウント設計',                 cat:'sns',    available:true},
-  {id:'4-4', title:'アカウントの機械学習',           cat:'sns',    available:true},
+  {id:'4-1', title:'アルゴリズムの考え方',           cat:'product',available:true},
+  {id:'4-2', title:'競合リサーチ',                   cat:'product',available:true},
+  {id:'4-3', title:'アカウント設計',                 cat:'product',available:true},
+  {id:'4-4', title:'アカウントの機械学習',           cat:'product',available:true},
   {id:'4-5', title:'【認知・夢】or【お金】',         cat:'sns',    available:true},
-  {id:'4-6', title:'優遇される映像',                 cat:'sns',    available:true},
-  {id:'4-7', title:'優遇される台本',                 cat:'sns',    available:true},
+  {id:'4-6', title:'優遇される映像',                 cat:'product',available:true},
+  {id:'4-7', title:'優遇される台本',                 cat:'product',available:true},
   {id:'4-8', title:'コメント戦略',                   cat:'sns',    available:true},
-  {id:'4-9', title:'誹謗中傷は必ず来る',             cat:'sns',    available:false},
-  {id:'4-10',title:'海外戦略',                       cat:'sns',    available:false},
-  {id:'4-11',title:'企業案件は事務所に入る',         cat:'sns',    available:false},
+  {id:'4-9', title:'誹謗中傷は必ず来る',             cat:'action', available:false},
+  {id:'4-10',title:'海外戦略',                       cat:'action', available:false},
+  {id:'4-11',title:'企業案件は事務所に入る',         cat:'action', available:false},
   {id:'4-12',title:'TikTok投稿手順_撮影',            cat:'sns',    available:true},
   {id:'4-13',title:'TikTok投稿手順_編集〜アップ',    cat:'sns',    available:true},
-  {id:'4-14',title:'顔出しする？しない？',           cat:'sns',    available:true},
+  {id:'4-14',title:'顔出しする？しない？',           cat:'action', available:true},
   {id:'5-1', title:'【認知・夢】のための動画',       cat:'sns',    available:true},
   {id:'5-2', title:'【お金】のための動画',           cat:'sns',    available:true},
 ];
@@ -419,11 +443,20 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let state = {};
 let typing = null;
 let currentUser = null;
+let fullAccess = false;
+const TRIAL_LIMIT_CHAPTER = 2;
 
 async function requireAuth(){
   const { data: { session } } = await sb.auth.getSession();
   if(!session){ location.href = 'login.html'; return null; }
   return session.user;
+}
+
+async function loadAccess(){
+  try{
+    const { data } = await sb.from('profiles').select('full_access').eq('id', currentUser.id).maybeSingle();
+    fullAccess = !!(data && data.full_access);
+  }catch(e){ fullAccess = false; }
 }
 
 async function signOut(){
@@ -517,14 +550,18 @@ function chapterCard(ch){
   const done = quests.filter(q=>state[q.id]).length;
   const pct = quests.length ? Math.round(done/quests.length*100) : 0;
   const complete = quests.length>0 && done===quests.length;
-  return `<div class="chapter-card ${complete?'done':''}">
+  const gated = !fullAccess && parseInt(ch.num,10) > TRIAL_LIMIT_CHAPTER;
+  const action = gated
+    ? `<span class="quest-locked pixel">🔒完全版限定</span>`
+    : `<a href="chapter.html?ch=${ch.num}">${complete?'見直す':'受講する'}</a>`;
+  return `<div class="chapter-card ${complete?'done':''} ${gated?'locked-quest':''}">
     <div class="chapter-card-badge pixel">Chapter ${ch.num}</div>
     <div class="chapter-card-main">
       <div class="chapter-card-title">${ch.title}</div>
       <div class="chapter-progress-track"><div class="chapter-progress-fill" style="width:${pct}%"></div></div>
-      <div class="chapter-progress-num pixel">${done}/${quests.length} クリア</div>
+      <div class="chapter-progress-num pixel">${gated ? 'お試し版では非公開' : done+'/'+quests.length+' クリア'}</div>
     </div>
-    <div class="quest-action"><a href="chapter.html?ch=${ch.num}">${complete?'見直す':'受講する'}</a></div>
+    <div class="quest-action">${action}</div>
   </div>`;
 }
 
@@ -567,6 +604,7 @@ async function toggleQuest(id){
 async function init(){
   currentUser = await requireAuth();
   if(!currentUser) return;
+  await loadAccess();
   await loadState();
   renderStats();
   renderQuests();
