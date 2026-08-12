@@ -245,6 +245,7 @@ img{image-rendering:pixelated;}
 
 footer{text-align:center; color:#736d92; font-size:10.5px; margin-top:56px;}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -258,6 +259,7 @@ footer{text-align:center; color:#736d92; font-size:10.5px; margin-top:56px;}
     <div class="xp-track"><div class="xp-fill" id="xpFill"></div></div>
     <span class="xp-num pixel" id="xpNum">0/100</span>
   </div>
+  <a href="#" onclick="signOut();return false;" class="pixel" style="font-size:10px;color:#a9a3c4;text-decoration:none;border:1px solid #423a63;padding:4px 8px;border-radius:4px;white-space:nowrap;">ログアウト</a>
 </div>
 
 <div class="screen-wrap">
@@ -410,18 +412,35 @@ const LEVELUP_LINES = [
   'その勢いだ。次のランクも見えてきたな。',
 ];
 
+const SUPABASE_URL = 'https://gwvapbmijorqzavcssvd.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd3dmFwYm1pam9ycXphdmNzc3ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY1MDUzNzQsImV4cCI6MjEwMjA4MTM3NH0.naWci7tc8OmEQ9WYCVZzFUB73tzWmZ-t8Oy4M2_hbzs';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 let state = {};
 let typing = null;
+let currentUser = null;
+
+async function requireAuth(){
+  const { data: { session } } = await sb.auth.getSession();
+  if(!session){ location.href = 'login.html'; return null; }
+  return session.user;
+}
+
+async function signOut(){
+  await sb.auth.signOut();
+  location.href = 'login.html';
+}
 
 async function loadState(){
   try{
-    const raw = localStorage.getItem('quest-progress');
-    if(raw){ state = JSON.parse(raw); }
+    const { data } = await sb.from('progress').select('data').eq('user_id', currentUser.id).maybeSingle();
+    state = (data && data.data) ? data.data : {};
   }catch(e){ state = {}; }
 }
 async function saveState(){
-  try{ localStorage.setItem('quest-progress', JSON.stringify(state)); }
-  catch(e){ /* storage unavailable, continue without persistence */ }
+  try{
+    await sb.from('progress').upsert({ user_id: currentUser.id, data: state, updated_at: new Date().toISOString() });
+  }catch(e){ /* network issue, will retry on next change */ }
 }
 
 function totalExp(){
@@ -546,6 +565,8 @@ async function toggleQuest(id){
 }
 
 async function init(){
+  currentUser = await requireAuth();
+  if(!currentUser) return;
   await loadState();
   renderStats();
   renderQuests();
