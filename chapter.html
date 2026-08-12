@@ -84,6 +84,7 @@ body{
 
 footer{text-align:center; color:#736d92; font-size:10.5px; margin-top:56px;}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -145,11 +146,23 @@ const MAIN_QUESTS = [
 ];
 MAIN_QUESTS.forEach(q=>{ q.chNum = q.id.split('-')[0]; });
 
+const SUPABASE_URL = 'https://gwvapbmijorqzavcssvd.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd3dmFwYm1pam9ycXphdmNzc3ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY1MDUzNzQsImV4cCI6MjEwMjA4MTM3NH0.naWci7tc8OmEQ9WYCVZzFUB73tzWmZ-t8Oy4M2_hbzs';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 let state = {};
-function loadState(){
+let currentUser = null;
+
+async function requireAuth(){
+  const { data: { session } } = await sb.auth.getSession();
+  if(!session){ location.href = 'login.html'; return null; }
+  return session.user;
+}
+
+async function loadState(){
   try{
-    const raw = localStorage.getItem('quest-progress');
-    if(raw){ state = JSON.parse(raw); }
+    const { data } = await sb.from('progress').select('data').eq('user_id', currentUser.id).maybeSingle();
+    state = (data && data.data) ? data.data : {};
   }catch(e){ state = {}; }
 }
 
@@ -192,8 +205,13 @@ function render(){
   `;
 }
 
-loadState();
-render();
+async function boot(){
+  currentUser = await requireAuth();
+  if(!currentUser) return;
+  await loadState();
+  render();
+}
+boot();
 </script>
 </body>
 </html>

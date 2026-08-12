@@ -97,6 +97,7 @@ body{
   background:var(--blue); color:#fff; text-decoration:none; border-radius:6px; border:2px solid #1c3468;
 }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -147,30 +148,44 @@ const VIDEOS = {
   '5-2':  {title:'【お金】のための動画',       platform:'youtube', videoId:'YNF5ansbVMs', available:true},
 };
 
+const SUPABASE_URL = 'https://gwvapbmijorqzavcssvd.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd3dmFwYm1pam9ycXphdmNzc3ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY1MDUzNzQsImV4cCI6MjEwMjA4MTM3NH0.naWci7tc8OmEQ9WYCVZzFUB73tzWmZ-t8Oy4M2_hbzs';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 const params = new URLSearchParams(location.search);
 const id = params.get('id');
 const video = VIDEOS[id];
 const content = document.getElementById('content');
 
-function markComplete(){
+let currentUser = null;
+let progressState = {};
+
+async function requireAuth(){
+  const { data: { session } } = await sb.auth.getSession();
+  if(!session){ location.href = 'login.html'; return null; }
+  return session.user;
+}
+
+async function loadProgressState(){
   try{
-    const raw = localStorage.getItem('quest-progress');
-    const state = raw ? JSON.parse(raw) : {};
-    if(!state[id]){
-      state[id] = true;
-      localStorage.setItem('quest-progress', JSON.stringify(state));
-    }
-  }catch(e){ /* storage unavailable */ }
+    const { data } = await sb.from('progress').select('data').eq('user_id', currentUser.id).maybeSingle();
+    progressState = (data && data.data) ? data.data : {};
+  }catch(e){ progressState = {}; }
+}
+
+async function markComplete(){
+  if(!progressState[id]){
+    progressState[id] = true;
+    try{
+      await sb.from('progress').upsert({ user_id: currentUser.id, data: progressState, updated_at: new Date().toISOString() });
+    }catch(e){ /* will retry on next update */ }
+  }
   const status = document.getElementById('statusCard');
   if(status) status.classList.add('show');
 }
 
 function alreadyDone(){
-  try{
-    const raw = localStorage.getItem('quest-progress');
-    const state = raw ? JSON.parse(raw) : {};
-    return !!state[id];
-  }catch(e){ return false; }
+  return !!progressState[id];
 }
 
 function renderLocked(title){
@@ -281,13 +296,19 @@ function mountVimeo(){
   document.body.appendChild(tag);
 }
 
-if(!video){
-  renderNotFound();
-} else if(video.available === false){
-  renderLocked(video.title);
-} else {
-  renderPlayer();
+async function boot(){
+  currentUser = await requireAuth();
+  if(!currentUser) return;
+  await loadProgressState();
+  if(!video){
+    renderNotFound();
+  } else if(video.available === false){
+    renderLocked(video.title);
+  } else {
+    renderPlayer();
+  }
 }
+boot();
 </script>
 </body>
 </html>
