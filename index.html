@@ -446,8 +446,29 @@ let currentUser = null;
 let fullAccess = false;
 const TRIAL_LIMIT_CHAPTER = 2;
 
+function getSessionOnce(){
+  return new Promise((resolve) => {
+    let done = false;
+    const { data: listener } = sb.auth.onAuthStateChange((_event, session) => {
+      if(done) return;
+      done = true;
+      listener.subscription.unsubscribe();
+      resolve(session);
+    });
+    // 保険: 数秒待ってもイベントが来なければ直接確認する
+    setTimeout(async () => {
+      if(done) return;
+      const { data: { session } } = await sb.auth.getSession();
+      if(done) return;
+      done = true;
+      listener.subscription.unsubscribe();
+      resolve(session);
+    }, 2000);
+  });
+}
+
 async function requireAuth(){
-  const { data: { session } } = await sb.auth.getSession();
+  const session = await getSessionOnce();
   if(!session){ location.href = 'login.html'; return null; }
   return session.user;
 }
