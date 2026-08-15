@@ -91,7 +91,7 @@ async function boot(){
     return;
   }
 
-  const { data: profiles, error: pErr } = await sb.from('profiles').select('id, email, created_at, full_access').order('created_at', {ascending:true});
+  const { data: profiles, error: pErr } = await sb.rpc('admin_list_students');
   const { data: progressRows } = await sb.from('progress').select('user_id, data, updated_at');
 
   if(pErr || !profiles){
@@ -102,20 +102,23 @@ async function boot(){
   const progressMap = {};
   (progressRows||[]).forEach(r => { progressMap[r.user_id] = r.data || {}; });
 
+  const fmt = (d) => d ? new Date(d).toLocaleString('ja-JP') : '(なし)';
+
   const rows = profiles.map(p=>{
     const data = progressMap[p.id] || {};
     const done = Object.values(data).filter(Boolean).length;
     const pct = Math.round(done/TOTAL_QUESTS*100);
-    return {id:p.id, email:p.email, created_at:p.created_at, full_access:p.full_access, done, pct};
+    return {id:p.id, email:p.email, created_at:p.created_at, last_sign_in_at:p.last_sign_in_at, full_access:p.full_access, done, pct};
   });
 
   content.innerHTML = `
     <table>
-      <tr><th>メール</th><th>登録日</th><th>進捗</th><th>プラン</th></tr>
+      <tr><th>メール</th><th>初回ログイン</th><th>最終ログイン</th><th>進捗</th><th>プラン</th></tr>
       ${rows.map(r=>`
         <tr>
           <td>${r.email||'(不明)'}</td>
-          <td>${new Date(r.created_at).toLocaleDateString('ja-JP')}</td>
+          <td>${fmt(r.created_at)}</td>
+          <td>${fmt(r.last_sign_in_at)}</td>
           <td>
             <span class="bar-track"><span class="bar-fill" style="width:${r.pct}%"></span></span>
             ${r.done}/${TOTAL_QUESTS}（${r.pct}%）
